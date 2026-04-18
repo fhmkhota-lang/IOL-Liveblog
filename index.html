@@ -1307,10 +1307,14 @@ body {
       <div class="right-section" id="embed-section" style="display:none;">
         <div class="right-section-title">🔗 Embed Code</div>
         <div class="embed-box" id="embed-code" onclick="copyEmbed()"><!-- generated --></div>
-        <div class="embed-hint">Click to copy • Paste into any story HTML</div>
+        <div class="embed-hint">Click to copy • Paste into any IOL story HTML</div>
+        <div class="embed-hint" style="margin-top:5px;font-size:10px;color:var(--dash-text-muted);line-height:1.6;">
+          ✅ <strong style="color:var(--iol-green);">Auto-updates in real time</strong> via Firebase — no page reload needed. New posts appear instantly for readers.
+        </div>
         <div class="copy-feedback" id="copy-feedback">✓ Copied to clipboard!</div>
-        <div style="margin-top:12px;">
-          <button class="btn btn-ghost btn-sm" onclick="showEmbedPreview()" style="width:100%;">Preview Embed →</button>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+          <button class="btn btn-ghost btn-sm" onclick="showEmbedPreview()" style="width:100%;">👁 Preview Embed</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEmbedInTab()" style="width:100%;">↗ Open in New Tab</button>
         </div>
       </div>
 
@@ -2252,7 +2256,30 @@ function getEmbedBaseUrl() {
 
 function updateEmbedCode(blogId) {
   const baseUrl = getEmbedBaseUrl();
-  const code = `<script src="${baseUrl}?embed=${blogId}" async><\/script><div id="iol-liveblog-${blogId}"></div>`;
+  const embedUrl = `${baseUrl}?embed=${blogId}`;
+  const frameId = `iol-liveblog-${blogId}`;
+  // iframe needs allow-scripts + allow-same-origin so Firebase SDK can run inside it
+  // allow-popups allows any links inside posts to open
+  const code = `<iframe
+  id="${frameId}"
+  src="${embedUrl}"
+  loading="lazy"
+  sandbox="allow-scripts allow-same-origin allow-popups"
+  style="width:100%;border:0;overflow:hidden;min-height:400px;display:block;"
+  scrolling="no"
+  referrerpolicy="no-referrer-when-downgrade">
+</iframe>
+<script>
+(function(){
+  var frame = document.getElementById('${frameId}');
+  if (!frame) return;
+  window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'iol-liveblog:resize' || e.data.blogId !== '${blogId}') return;
+    var h = Math.max(Number(e.data.height) || 400, 200);
+    frame.style.height = h + 'px';
+  });
+})();
+<\/script>`;
   const el = document.getElementById('embed-code');
   if (el) el.textContent = code;
   const elModal = document.getElementById('embed-code-modal');
@@ -2288,6 +2315,11 @@ function copyShareLink() {
   copyToClipboard(url);
   showToast('Share link copied!');
 }
+function openEmbedInTab() {
+  const blogId = appState.activeBlogId;
+  if (!blogId) return;
+  window.open(getEmbedBaseUrl() + '?embed=' + blogId, '_blank');
+}
 
 // =============================================
 // EMBED PREVIEW
@@ -2296,7 +2328,22 @@ function showEmbedPreview() {
   const blogId = appState.activeBlogId;
   if (!blogId) return;
   updateEmbedCode(blogId);
-  document.getElementById('embed-preview-modal-content').innerHTML = buildEmbedHTML(blogId);
+  // Show a live iframe preview so the journalist sees exactly what readers see
+  const baseUrl = getEmbedBaseUrl();
+  const previewUrl = `${baseUrl}?embed=${blogId}`;
+  document.getElementById('embed-preview-modal-content').innerHTML = `
+    <p style="font-size:12px;color:var(--dash-text-muted);margin-bottom:10px;">
+      This is a live preview — it updates in real time as you publish. Readers on IOL will see this widget embedded in the article.
+    </p>
+    <div style="border:1px solid var(--dash-border);border-radius:var(--radius);overflow:hidden;background:#fff;">
+      <iframe
+        src="${previewUrl}"
+        sandbox="allow-scripts allow-same-origin allow-popups"
+        style="width:100%;border:0;min-height:420px;display:block;"
+        scrolling="no"
+        loading="lazy">
+      </iframe>
+    </div>`;
   document.getElementById('embed-preview-modal').classList.add('open');
 }
 function closeEmbedPreviewModal() {
@@ -2361,10 +2408,21 @@ function buildEmbedHTML(blogId) {
 function updateEmbedPreview() {
   const blogId = appState.activeBlogId;
   if (!blogId) return;
-  const wrapper = document.getElementById('embed-preview-wrapper');
-  if (wrapper) wrapper.innerHTML = buildEmbedHTML(blogId);
   const section = document.getElementById('embed-preview-section');
-  if (section) section.style.display = 'block';
+  const wrapper = document.getElementById('embed-preview-wrapper');
+  if (!wrapper || !section) return;
+  // Only inject the iframe once — Firebase inside it handles live updates
+  if (!wrapper.querySelector('iframe')) {
+    const baseUrl = getEmbedBaseUrl();
+    wrapper.innerHTML = `<iframe
+      src="${baseUrl}?embed=${blogId}"
+      sandbox="allow-scripts allow-same-origin allow-popups"
+      style="width:100%;border:0;min-height:300px;display:block;"
+      scrolling="no"
+      loading="lazy">
+    </iframe>`;
+  }
+  section.style.display = 'block';
 }
 
 // =============================================
@@ -2463,17 +2521,43 @@ function getTimeAgo(isoStr) {
 function startEmbedFirebaseSync(blogId) {
   if (!appState.useFirebase || !appState.embed?.renderWidget || !blogId) return;
 
+  // Track whether both initial values have arrived before first render
+  let blogReady = false, postsReady = false;
+
+  function maybeRender() {
+    if (blogReady && postsReady) {
+      appState.embed.renderWidget(appState.blogs, appState.posts);
+      // Notify parent of new height after render (handles new posts making widget taller)
+      requestAnimationFrame(() => notifyEmbedHeight(blogId));
+    }
+  }
+
+  // Listen for blog metadata changes (status, title, updatedAt, etc.)
   appState.db.ref('blogs/' + blogId).on('value', snap => {
     const blog = snap.val();
     if (blog) appState.blogs[blogId] = blog;
     else delete appState.blogs[blogId];
-    appState.embed.renderWidget(appState.blogs, appState.posts);
+    blogReady = true;
+    maybeRender();
   });
 
+  // Listen for post changes — any add/edit/delete triggers an instant re-render
   appState.db.ref('posts/' + blogId).on('value', snap => {
     appState.posts[blogId] = snap.val() || {};
-    appState.embed.renderWidget(appState.blogs, appState.posts);
+    postsReady = true;
+    maybeRender();
   });
+}
+
+function notifyEmbedHeight(blogId) {
+  if (!appState.isEmbedMode || !blogId || window.parent === window) return;
+  const height = Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || 0);
+  // Use '*' as targetOrigin — the iframe (GitHub Pages) and parent (IOL) are cross-origin
+  window.parent.postMessage({
+    type: 'iol-liveblog:resize',
+    blogId,
+    height,
+  }, '*');
 }
 
 (function checkEmbedMode() {
@@ -2559,20 +2643,34 @@ function startEmbedFirebaseSync(blogId) {
           </div>
         </div>`;
 
-      // Auto-refresh every 30s for live blogs
-      if (isLive) setTimeout(() => location.reload(), 30000);
+      requestAnimationFrame(() => notifyEmbedHeight(blogId));
+
+      // Real-time updates handled by Firebase .on('value') listener — no polling needed
     }
 
     function escHtmlW(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
-    // Load from localStorage (fallback) or Firebase
-    const localBlogs = JSON.parse(localStorage.getItem('iol_blogs') || '{}');
-    const localPosts = {};
-    if (localBlogs[blogId]) localPosts[blogId] = JSON.parse(localStorage.getItem('iol_posts_' + blogId) || '{}');
+    // Store embed state — Firebase will call renderWidget once it connects
     appState.embed = { blogId, renderWidget };
-    appState.blogs = localBlogs;
-    appState.posts = localPosts;
-    renderWidget(localBlogs, localPosts);
+
+    // Show a loading skeleton immediately while Firebase connects
+    container.innerHTML = `<div style="font-family:'Source Sans 3',Georgia,sans-serif;border:1px solid #ddd;border-radius:4px;overflow:hidden;background:#fff;">
+      <div style="background:#D0021B;padding:10px 16px;">
+        <div style="width:120px;height:14px;background:rgba(255,255,255,0.2);border-radius:3px;"></div>
+      </div>
+      <div style="padding:20px 16px;text-align:center;color:#aaa;font-size:13px;">
+        <div style="width:20px;height:20px;border:2px solid #ddd;border-top-color:#D0021B;border-radius:50%;animation:iolspin 0.7s linear infinite;margin:0 auto 10px;"></div>
+        Loading live blog…
+      </div>
+      <style>@keyframes iolspin{to{transform:rotate(360deg)}}</style>
+    </div>`;
+
+    // If Firebase is already ready (fast connection), start sync now
+    if (appState.useFirebase) {
+      startEmbedFirebaseSync(blogId);
+    }
+    // Otherwise initFirebase() (called below) will call startEmbedFirebaseSync
+    // once the SDK loads — see initFirebase() handler
   }
 })();
 
