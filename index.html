@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- GitHub Pages entrypoint -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1072,9 +1073,8 @@ body {
     </div>
     <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign In to Dashboard</button>
     <div class="login-info">
-      <strong>Demo credentials:</strong><br>
-      Username: <code>journalist</code> &nbsp;|&nbsp; Password: <code>iol2024</code><br><br>
-      <span style="color:#555; font-size:11px;">Or enter any credentials to use in demo mode</span>
+      Sign in with the journalist email and password assigned in Firebase Authentication.<br><br>
+      <span style="color:#555; font-size:11px;">Access is managed in Firebase. Public readers can view embeds, but only approved accounts can publish.</span>
     </div>
   </div>
 </div>
@@ -1105,9 +1105,9 @@ body {
     <p>This dashboard works fully in <strong>demo mode</strong> right now. To enable real-time collaboration and embed functionality across devices, connect a free Firebase project (takes ~3 minutes):</p>
     <div class="config-steps">
       <div class="config-step">Go to <strong>console.firebase.google.com</strong> → Create project → Add a Web app</div>
-      <div class="config-step">Enable <strong>Realtime Database</strong> → Start in test mode</div>
+      <div class="config-step">Enable <strong>Realtime Database</strong> and <strong>Authentication → Email/Password</strong></div>
       <div class="config-step">Copy your config object and paste into the <code>FIREBASE_CONFIG</code> variable at the bottom of this HTML file</div>
-      <div class="config-step">Re-upload to GitHub Pages — all journalists can now collaborate in real-time!</div>
+      <div class="config-step">Set database rules so public reads are allowed and writes require signed-in users, then re-upload to GitHub Pages</div>
     </div>
     <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
       <button class="btn btn-ghost btn-sm" onclick="dismissConfigWarning()">Dismiss (use local demo)</button>
@@ -1402,7 +1402,6 @@ const FIREBASE_CONFIG = {
   appId: "1:828256560148:web:cd73c2aab75cc3b5303301"
 };
 
-
 // =============================================
 // APP STATE
 // =============================================
@@ -1414,47 +1413,71 @@ let appState = {
   firebaseReady: false,
   useFirebase: false,
   editingPostId: null,
+  auth: null,
+  firebaseInitStarted: false,
+  isEmbedMode: false,
+  embed: null,
 };
 
 // =============================================
-// FIREBASE INIT (optional)
+// FIREBASE INIT
 // =============================================
+function loadFirebaseScript(src, onload) {
+  const script = document.createElement('script');
+  script.src = src;
+  script.onload = onload;
+  document.head.appendChild(script);
+}
+
 function initFirebase() {
+  if (appState.firebaseInitStarted) return;
+  appState.firebaseInitStarted = true;
+
   if (!FIREBASE_CONFIG.apiKey) {
     console.log('Firebase not configured — running in local demo mode');
-    document.getElementById('config-warning').style.display = 'block';
+    const warning = document.getElementById('config-warning');
+    if (warning) warning.style.display = 'block';
     updateConnectionIndicator(false);
     return;
   }
+
   try {
-    // Dynamically load Firebase
-    const script1 = document.createElement('script');
-    script1.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
-    script1.onload = () => {
-      const script2 = document.createElement('script');
-      script2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
-      script2.onload = () => {
-        firebase.initializeApp(FIREBASE_CONFIG);
-        appState.db = firebase.database();
-        appState.useFirebase = true;
-        appState.firebaseReady = true;
-        updateConnectionIndicator(true);
-        loadBlogsFromFirebase();
-        showToast('Connected to Firebase — real-time sync active!', 'success');
-      };
-      document.head.appendChild(script2);
-    };
-    document.head.appendChild(script1);
+    loadFirebaseScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js', () => {
+      loadFirebaseScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js', () => {
+        loadFirebaseScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js', () => {
+          firebase.initializeApp(FIREBASE_CONFIG);
+          appState.auth = firebase.auth();
+          appState.db = firebase.database();
+          appState.useFirebase = true;
+          appState.firebaseReady = true;
+          updateConnectionIndicator(true);
+          appState.auth.onAuthStateChanged(handleAuthStateChanged);
+
+          if (appState.isEmbedMode && appState.embed?.blogId) {
+            startEmbedFirebaseSync(appState.embed.blogId);
+          } else {
+            loadBlogsFromFirebase();
+          }
+
+          if (!appState.isEmbedMode) {
+            showToast('Connected to Firebase — real-time sync active!', 'success');
+          }
+        });
+      });
+    });
   } catch(e) {
     console.error('Firebase init failed:', e);
     updateConnectionIndicator(false);
-    showToast('Firebase connection failed — using local mode', 'error');
+    if (!appState.isEmbedMode) {
+      showToast('Firebase connection failed — using local mode', 'error');
+    }
   }
 }
 
 function updateConnectionIndicator(connected) {
   const indicator = document.getElementById('connection-indicator');
   const text = document.getElementById('connection-text');
+  if (!indicator || !text) return;
   if (connected) {
     indicator.style.color = 'var(--iol-green)';
     indicator.querySelector('.live-dot').style.background = 'var(--iol-green)';
@@ -1469,30 +1492,85 @@ function updateConnectionIndicator(connected) {
 // =============================================
 // AUTH
 // =============================================
-function doLogin() {
+function buildUserProfile(user) {
+  const email = user?.email || '';
+  const fallbackName = email.split('@')[0] || 'journalist';
+  const displayName = (user?.displayName || fallbackName)
+    .replace(/[._-]+/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+  const initials = displayName.split(' ').map(w => w[0]?.toUpperCase()).join('').slice(0, 2) || 'J';
+
+  return {
+    uid: user?.uid,
+    email,
+    username: email || user?.uid,
+    displayName,
+    initials,
+  };
+}
+
+function updateSignedInUserUi() {
+  document.getElementById('user-avatar').textContent = appState.user?.initials || 'J';
+  document.getElementById('user-display').textContent = appState.user?.displayName || 'Journalist';
+}
+
+function handleAuthStateChanged(user) {
+  if (appState.isEmbedMode) return;
+
+  if (!user) {
+    appState.user = null;
+    appState.activeBlogId = null;
+    updateSignedInUserUi();
+    showScreen('screen-login');
+    return;
+  }
+
+  appState.user = buildUserProfile(user);
+  updateSignedInUserUi();
+  showScreen('screen-dashboard');
+}
+
+async function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value.trim();
+  const btn = document.getElementById('login-btn');
 
   if (!user) { showToast('Enter your username', 'error'); return; }
   if (!pass) { showToast('Enter your password', 'error'); return; }
 
-  // Demo auth (replace with real auth in production)
-  const initials = user.split('@')[0].split('.').map(w => w[0]?.toUpperCase()).join('').slice(0,2) || 'J';
-  const displayName = user.includes('@') ? user.split('@')[0].replace(/\./g,' ') : user;
+  if (!FIREBASE_CONFIG.apiKey) {
+    const initials = user.split('@')[0].split('.').map(w => w[0]?.toUpperCase()).join('').slice(0,2) || 'J';
+    const displayName = user.includes('@') ? user.split('@')[0].replace(/\./g,' ') : user;
+    appState.user = {
+      username: user,
+      displayName: displayName.replace(/\b\w/g, l => l.toUpperCase()),
+      initials,
+    };
+    updateSignedInUserUi();
+    showScreen('screen-dashboard');
+    loadLocalBlogs();
+    showToast(`Welcome back, ${appState.user.displayName}!`);
+    return;
+  }
 
-  appState.user = {
-    username: user,
-    displayName: displayName.replace(/\b\w/g, l => l.toUpperCase()),
-    initials,
-  };
+  if (!appState.auth) {
+    showToast('Firebase is still connecting. Try again in a moment.', 'error');
+    return;
+  }
 
-  document.getElementById('user-avatar').textContent = initials;
-  document.getElementById('user-display').textContent = appState.user.displayName;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Signing In...';
 
-  showScreen('screen-dashboard');
-  initFirebase();
-  loadLocalBlogs();
-  showToast(`Welcome back, ${appState.user.displayName}!`);
+  try {
+    await appState.auth.signInWithEmailAndPassword(user, pass);
+    showToast('Signed in successfully.');
+  } catch (error) {
+    console.error('Sign-in failed:', error);
+    showToast('Sign-in failed. Check that this journalist account exists in Firebase Authentication.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In to Dashboard';
+  }
 }
 
 document.getElementById('login-user').addEventListener('keydown', e => {
@@ -1502,7 +1580,18 @@ document.getElementById('login-pass').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
 
-function doLogout() {
+async function doLogout() {
+  if (appState.auth) {
+    try {
+      await appState.auth.signOut();
+      showToast('Signed out.');
+      return;
+    } catch (error) {
+      console.error('Sign-out failed:', error);
+      showToast('Sign-out failed. Refresh and try again.', 'error');
+      return;
+    }
+  }
   appState.user = null;
   appState.activeBlogId = null;
   showScreen('screen-login');
@@ -1573,6 +1662,14 @@ async function deletePostFromFirebase(blogId, postId) {
   await appState.db.ref('posts/' + blogId + '/' + postId).remove();
 }
 
+function getFirebaseWriteErrorMessage(error) {
+  if (!error) return 'Could not save your change.';
+  if (error.code === 'PERMISSION_DENIED' || error.code === 'auth/invalid-credential') {
+    return 'You do not have permission to publish. Check that you are signed in with an approved journalist account.';
+  }
+  return 'Could not save your change to Firebase. Please try again.';
+}
+
 // =============================================
 // BLOG MANAGEMENT
 // =============================================
@@ -1606,8 +1703,16 @@ async function createBlog() {
   appState.blogs[blogId] = blog;
   appState.posts[blogId] = {};
 
-  if (appState.useFirebase) await saveBlogToFirebase(blog);
-  else saveBlogsLocal();
+  try {
+    if (appState.useFirebase) await saveBlogToFirebase(blog);
+    else saveBlogsLocal();
+  } catch (error) {
+    console.error('Create blog failed:', error);
+    delete appState.blogs[blogId];
+    delete appState.posts[blogId];
+    showToast(getFirebaseWriteErrorMessage(error), 'error');
+    return;
+  }
 
   closeNewBlogModal();
   renderBlogsList();
@@ -1708,10 +1813,21 @@ async function toggleBlogLive() {
   if (!blogId) return;
   const blog = appState.blogs[blogId];
   const isLive = document.getElementById('toggle-live').checked;
+  const previousStatus = blog.status;
   blog.status = isLive ? 'live' : 'paused';
   blog.updatedAt = new Date().toISOString();
-  if (appState.useFirebase) await saveBlogToFirebase(blog);
-  else saveBlogsLocal();
+
+  try {
+    if (appState.useFirebase) await saveBlogToFirebase(blog);
+    else saveBlogsLocal();
+  } catch (error) {
+    console.error('Toggle live failed:', error);
+    blog.status = previousStatus;
+    document.getElementById('toggle-live').checked = previousStatus === 'live';
+    showToast(getFirebaseWriteErrorMessage(error), 'error');
+    return;
+  }
+
   renderBlogsList();
   updateStatusBadge(blog.status);
   document.getElementById('editor-toolbar-btns').querySelector('.btn-danger') && endBlogBtnRefresh(blog);
@@ -1729,10 +1845,20 @@ async function endBlog() {
   if (!appState.activeBlogId) return;
   if (!confirm('Mark this live blog as ended? Readers will see an "ended" badge.')) return;
   const blog = appState.blogs[appState.activeBlogId];
+  const previousStatus = blog.status;
   blog.status = 'ended';
   blog.updatedAt = new Date().toISOString();
-  if (appState.useFirebase) await saveBlogToFirebase(blog);
-  else saveBlogsLocal();
+
+  try {
+    if (appState.useFirebase) await saveBlogToFirebase(blog);
+    else saveBlogsLocal();
+  } catch (error) {
+    console.error('End blog failed:', error);
+    blog.status = previousStatus;
+    showToast(getFirebaseWriteErrorMessage(error), 'error');
+    return;
+  }
+
   renderBlogsList();
   selectBlog(appState.activeBlogId);
   showToast('Live blog ended.');
@@ -1775,6 +1901,10 @@ async function submitPost() {
 
   const postId = appState.editingPostId || ('post_' + Date.now());
   const isEdit = !!appState.editingPostId;
+  const previousPost = appState.posts[blogId]?.[postId] ? { ...appState.posts[blogId][postId] } : null;
+  const previousPostCount = blog.postCount || 0;
+  const previousUpdatedAt = blog.updatedAt;
+  const previousLastPostTime = blog.lastPostTime;
 
   const post = {
     id: postId,
@@ -1799,24 +1929,34 @@ async function submitPost() {
   blog.updatedAt = new Date().toISOString();
   blog.lastPostTime = post.timestamp;
 
-  if (appState.useFirebase) {
-    await savePostToFirebase(blogId, post);
-    await saveBlogToFirebase(blog);
-  } else {
-    savePostsLocal(blogId);
-    saveBlogsLocal();
-    renderPosts();
-    updateStats();
-    updateEmbedPreview();
-    renderBlogsList();
+  try {
+    if (appState.useFirebase) {
+      await savePostToFirebase(blogId, post);
+      await saveBlogToFirebase(blog);
+    } else {
+      savePostsLocal(blogId);
+      saveBlogsLocal();
+      renderPosts();
+      updateStats();
+      updateEmbedPreview();
+      renderBlogsList();
+    }
+
+    clearCompose();
+    appState.editingPostId = null;
+    showToast(isEdit ? '✏️ Post updated' : `${type === 'breaking' ? '🔴 Breaking update' : type === 'key' ? '⭐ Key moment'  : '✅ Update'} published!`);
+  } catch (error) {
+    console.error('Submit post failed:', error);
+    if (previousPost) appState.posts[blogId][postId] = previousPost;
+    else delete appState.posts[blogId][postId];
+    blog.postCount = previousPostCount;
+    blog.updatedAt = previousUpdatedAt;
+    blog.lastPostTime = previousLastPostTime;
+    showToast(getFirebaseWriteErrorMessage(error), 'error');
+  } finally {
+    btn.innerHTML = appState.editingPostId ? 'Update Post' : 'Publish Update';
+    btn.disabled = false;
   }
-
-  clearCompose();
-  appState.editingPostId = null;
-  btn.innerHTML = 'Publish Update';
-  btn.disabled = false;
-
-  showToast(isEdit ? '✏️ Post updated' : `${type === 'breaking' ? '🔴 Breaking update' : type === 'key' ? '⭐ Key moment'  : '✅ Update'} published!`);
 }
 
 function renderPosts() {
@@ -1911,27 +2051,45 @@ async function togglePinPost(postId) {
   const post = appState.posts[blogId]?.[postId];
   if (!post) return;
   post.pinned = !post.pinned;
-  if (appState.useFirebase) await savePostToFirebase(blogId, post);
-  else savePostsLocal(blogId);
+  try {
+    if (appState.useFirebase) await savePostToFirebase(blogId, post);
+    else savePostsLocal(blogId);
+  } catch (error) {
+    console.error('Toggle pin failed:', error);
+    post.pinned = !post.pinned;
+    showToast(getFirebaseWriteErrorMessage(error), 'error');
+    return;
+  }
   renderPosts();
 }
 
 async function deletePost(postId) {
   if (!confirm('Delete this post?')) return;
   const blogId = appState.activeBlogId;
+  const post = appState.posts[blogId]?.[postId];
+  if (!post) return;
+  const previousPosts = { ...appState.posts[blogId] };
   delete appState.posts[blogId][postId];
   const blog = appState.blogs[blogId];
   blog.postCount = Object.keys(appState.posts[blogId]).length;
-  if (appState.useFirebase) {
-    await deletePostFromFirebase(blogId, postId);
-    await saveBlogToFirebase(blog);
-  } else {
-    savePostsLocal(blogId);
-    saveBlogsLocal();
-    renderPosts();
-    updateStats();
-    updateEmbedPreview();
-    renderBlogsList();
+  try {
+    if (appState.useFirebase) {
+      await deletePostFromFirebase(blogId, postId);
+      await saveBlogToFirebase(blog);
+    } else {
+      savePostsLocal(blogId);
+      saveBlogsLocal();
+      renderPosts();
+      updateStats();
+      updateEmbedPreview();
+      renderBlogsList();
+    }
+  } catch (error) {
+    console.error('Delete post failed:', error);
+    appState.posts[blogId] = previousPosts;
+    blog.postCount = Object.keys(appState.posts[blogId]).length;
+    showToast(getFirebaseWriteErrorMessage(error), 'error');
+    return;
   }
   showToast('Post deleted');
 }
@@ -2264,13 +2422,16 @@ function toggleMobileMenu() {
   document.getElementById('sidebar').classList.toggle('mobile-open');
 }
 function dismissConfigWarning() {
-  document.getElementById('config-warning').style.display = 'none';
+  const warning = document.getElementById('config-warning');
+  if (warning) warning.style.display = 'none';
 }
 function showToast(msg, type = 'success') {
+  const toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) return;
   const el = document.createElement('div');
   el.className = 'toast' + (type === 'error' ? ' error' : '');
   el.textContent = msg;
-  document.getElementById('toast-container').appendChild(el);
+  toastContainer.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = '0.3s'; setTimeout(() => el.remove(), 300); }, 3000);
 }
 function escHtml(str) {
@@ -2299,12 +2460,29 @@ function getTimeAgo(isoStr) {
 // =============================================
 // EMBED WIDGET MODE (if page loaded with ?embed=)
 // =============================================
+function startEmbedFirebaseSync(blogId) {
+  if (!appState.useFirebase || !appState.embed?.renderWidget || !blogId) return;
+
+  appState.db.ref('blogs/' + blogId).on('value', snap => {
+    const blog = snap.val();
+    if (blog) appState.blogs[blogId] = blog;
+    else delete appState.blogs[blogId];
+    appState.embed.renderWidget(appState.blogs, appState.posts);
+  });
+
+  appState.db.ref('posts/' + blogId).on('value', snap => {
+    appState.posts[blogId] = snap.val() || {};
+    appState.embed.renderWidget(appState.blogs, appState.posts);
+  });
+}
+
 (function checkEmbedMode() {
   const params = new URLSearchParams(window.location.search);
   const embedBlogId = params.get('embed');
   const previewBlogId = params.get('preview');
 
   if (embedBlogId || previewBlogId) {
+    appState.isEmbedMode = true;
     const blogId = embedBlogId || previewBlogId;
     // Render widget mode
     document.body.innerHTML = '';
@@ -2391,12 +2569,16 @@ function getTimeAgo(isoStr) {
     const localBlogs = JSON.parse(localStorage.getItem('iol_blogs') || '{}');
     const localPosts = {};
     if (localBlogs[blogId]) localPosts[blogId] = JSON.parse(localStorage.getItem('iol_posts_' + blogId) || '{}');
+    appState.embed = { blogId, renderWidget };
+    appState.blogs = localBlogs;
+    appState.posts = localPosts;
     renderWidget(localBlogs, localPosts);
   }
 })();
 
 // Periodic stats refresh
 setInterval(() => { if (appState.activeBlogId) updateStats(); }, 60000);
+initFirebase();
 </script>
 </body>
 </html>
