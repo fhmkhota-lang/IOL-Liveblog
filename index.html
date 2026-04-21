@@ -1481,31 +1481,9 @@ const FIREBASE_CONFIG = {
   appId: "1:828256560148:web:cd73c2aab75cc3b5303301"
 };
 
-// =============================================
-// IOL JOURNALIST ROSTER
-// Edit this list to match your team.
-// Firebase users will be merged in automatically.
-// =============================================
-const IOL_JOURNALISTS = [
-  { uid: 'iol_001', displayName: 'Sipho Dlamini',     initials: 'SD', role: 'Reporter',        email: 'sipho.dlamini@inl.co.za' },
-  { uid: 'iol_002', displayName: 'Fatima Moosa',       initials: 'FM', role: 'Senior Reporter',  email: 'fatima.moosa@inl.co.za' },
-  { uid: 'iol_003', displayName: 'Luyanda Nkosi',      initials: 'LN', role: 'Sports Reporter',  email: 'luyanda.nkosi@inl.co.za' },
-  { uid: 'iol_004', displayName: 'Priya Naidoo',       initials: 'PN', role: 'Political Editor', email: 'priya.naidoo@inl.co.za' },
-  { uid: 'iol_005', displayName: 'James van der Berg',  initials: 'JV', role: 'News Editor',      email: 'james.vandenberg@inl.co.za' },
-  { uid: 'iol_006', displayName: 'Nomsa Zwane',        initials: 'NZ', role: 'Reporter',          email: 'nomsa.zwane@inl.co.za' },
-  { uid: 'iol_007', displayName: 'Ashraf Hendricks',   initials: 'AH', role: 'Journalist',        email: 'ashraf.hendricks@inl.co.za' },
-  { uid: 'iol_008', displayName: 'Taryn Holt',         initials: 'TH', role: 'Digital Editor',    email: 'taryn.holt@inl.co.za' },
-];
 function getAllUsers() {
-  // Merge hardcoded roster with any Firebase-authenticated users
-  const firebaseUsers = appState.allUsers || [];
-  const merged = [...IOL_JOURNALISTS];
-  firebaseUsers.forEach(fu => {
-    if (!merged.find(j => j.uid === fu.uid || j.displayName === fu.displayName)) {
-      merged.push(fu);
-    }
-  });
-  return merged.sort((a,b) => a.displayName.localeCompare(b.displayName));
+  // Returns all users who have logged into the dashboard — pulled live from Firebase /users
+  return (appState.allUsers || []).sort((a,b) => a.displayName.localeCompare(b.displayName));
 }
 
 // =============================================
