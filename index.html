@@ -1621,12 +1621,27 @@ function handleAuthStateChanged(user) {
   updateSignedInUserUi();
   showScreen('screen-dashboard');
   if (appState.useFirebase && appState.user.uid) {
-    appState.db.ref('users/' + appState.user.uid).set({
+    const userRecord = {
       uid: appState.user.uid,
       displayName: appState.user.displayName,
       email: appState.user.email,
       initials: appState.user.initials,
-    });
+    };
+    appState.db.ref('users/' + appState.user.uid).set(userRecord)
+      .then(() => {
+        console.log('[IOL] Wrote user to Firebase:', userRecord.displayName);
+        // Now read back all users
+        return appState.db.ref('users').once('value');
+      })
+      .then(snap => {
+        appState.allUsers = Object.values(snap.val() || {});
+        console.log('[IOL] All users in Firebase:', appState.allUsers.map(u => u.displayName).join(', '));
+        showToast('Users loaded: ' + appState.allUsers.map(u => u.displayName).join(', '));
+      })
+      .catch(err => {
+        console.error('[IOL] Firebase /users write FAILED:', err.message);
+        showToast('Firebase /users permission denied! Fix DB rules — see console.', 'error');
+      });
   }
 }
 
