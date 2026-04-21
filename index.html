@@ -1481,9 +1481,31 @@ const FIREBASE_CONFIG = {
   appId: "1:828256560148:web:cd73c2aab75cc3b5303301"
 };
 
+// =============================================
+// IOL JOURNALIST ROSTER
+// Edit this list to match your team.
+// Firebase users will be merged in automatically.
+// =============================================
+const IOL_JOURNALISTS = [
+  { uid: 'iol_001', displayName: 'Sipho Dlamini',     initials: 'SD', role: 'Reporter',        email: 'sipho.dlamini@inl.co.za' },
+  { uid: 'iol_002', displayName: 'Fatima Moosa',       initials: 'FM', role: 'Senior Reporter',  email: 'fatima.moosa@inl.co.za' },
+  { uid: 'iol_003', displayName: 'Luyanda Nkosi',      initials: 'LN', role: 'Sports Reporter',  email: 'luyanda.nkosi@inl.co.za' },
+  { uid: 'iol_004', displayName: 'Priya Naidoo',       initials: 'PN', role: 'Political Editor', email: 'priya.naidoo@inl.co.za' },
+  { uid: 'iol_005', displayName: 'James van der Berg',  initials: 'JV', role: 'News Editor',      email: 'james.vandenberg@inl.co.za' },
+  { uid: 'iol_006', displayName: 'Nomsa Zwane',        initials: 'NZ', role: 'Reporter',          email: 'nomsa.zwane@inl.co.za' },
+  { uid: 'iol_007', displayName: 'Ashraf Hendricks',   initials: 'AH', role: 'Journalist',        email: 'ashraf.hendricks@inl.co.za' },
+  { uid: 'iol_008', displayName: 'Taryn Holt',         initials: 'TH', role: 'Digital Editor',    email: 'taryn.holt@inl.co.za' },
+];
 function getAllUsers() {
-  // Returns all users who have logged into the dashboard — pulled live from Firebase /users
-  return (appState.allUsers || []).sort((a,b) => a.displayName.localeCompare(b.displayName));
+  // Merge hardcoded roster with any Firebase-authenticated users
+  const firebaseUsers = appState.allUsers || [];
+  const merged = [...IOL_JOURNALISTS];
+  firebaseUsers.forEach(fu => {
+    if (!merged.find(j => j.uid === fu.uid || j.displayName === fu.displayName)) {
+      merged.push(fu);
+    }
+  });
+  return merged.sort((a,b) => a.displayName.localeCompare(b.displayName));
 }
 
 // =============================================
@@ -1536,14 +1558,6 @@ function initFirebase() {
           appState.firebaseReady = true;
           updateConnectionIndicator(true);
           appState.auth.onAuthStateChanged(handleAuthStateChanged);
-
-          // Load users immediately so author/contributor dropdowns are populated
-          appState.db.ref('users').on('value', snap => {
-            appState.allUsers = Object.values(snap.val() || {});
-            if (appState.activeBlogId && appState.blogs[appState.activeBlogId]) {
-              renderContributors(appState.blogs[appState.activeBlogId]);
-            }
-          });
 
           if (appState.isEmbedMode && appState.embed?.blogId) {
             startEmbedFirebaseSync(appState.embed.blogId);
@@ -1621,27 +1635,15 @@ function handleAuthStateChanged(user) {
   updateSignedInUserUi();
   showScreen('screen-dashboard');
   if (appState.useFirebase && appState.user.uid) {
-    const userRecord = {
+    appState.db.ref('users/' + appState.user.uid).set({
       uid: appState.user.uid,
       displayName: appState.user.displayName,
       email: appState.user.email,
       initials: appState.user.initials,
-    };
-    appState.db.ref('users/' + appState.user.uid).set(userRecord)
-      .then(() => {
-        console.log('[IOL] Wrote user to Firebase:', userRecord.displayName);
-        // Now read back all users
-        return appState.db.ref('users').once('value');
-      })
-      .then(snap => {
-        appState.allUsers = Object.values(snap.val() || {});
-        console.log('[IOL] All users in Firebase:', appState.allUsers.map(u => u.displayName).join(', '));
-        showToast('Users loaded: ' + appState.allUsers.map(u => u.displayName).join(', '));
-      })
-      .catch(err => {
-        console.error('[IOL] Firebase /users write FAILED:', err.message);
-        showToast('Firebase /users permission denied! Fix DB rules — see console.', 'error');
-      });
+    });
+    appState.db.ref('users').on('value', snap => {
+      appState.allUsers = Object.values(snap.val() || {});
+    });
   }
 }
 
@@ -1756,8 +1758,7 @@ function loadBlogsFromFirebase() {
     appState.blogs = {};
     Object.values(all).forEach(blog => {
       const isOwner = blog.createdBy === uid || blog.createdBy === uname;
-      const dname = appState.user?.displayName;
-      const isContrib = (blog.contributors || []).some(c => c.uid === uid || c.name === dname);
+      const isContrib = (blog.contributors || []).some(c => c.uid === uid);
       if (isOwner || isContrib) appState.blogs[blog.id] = blog;
     });
     renderBlogsList();
@@ -1798,52 +1799,46 @@ function getFirebaseWriteErrorMessage(error) {
 // BLOG MANAGEMENT
 // =============================================
 function openNewBlogModal(editBlogId = null) {
-  appState.editingBlogId = editBlogId || null;
+  appState.editingBlogId = editBlogId;
   const modal = document.getElementById('new-blog-modal');
+  const submitBtn = document.getElementById('blog-modal-submit-btn');
+  const modalTitle = modal.querySelector('.modal-title');
   modal.classList.add('open');
 
-  // Populate author dropdown — fetch fresh from Firebase each time
-  const authorSel = document.getElementById('new-blog-author');
-  function _populateAuthor() {
-    const users = getAllUsers();
-    if (!authorSel) return;
-    authorSel.innerHTML = '<option value="">Select author...</option>' +
-      users.map(u => `<option value="${escHtml(u.displayName)}">${escHtml(u.displayName)}</option>`).join('');
-  }
-  if (appState.useFirebase) {
-    appState.db.ref('users').once('value', snap => {
-      appState.allUsers = Object.values(snap.val() || {});
-      _populateAuthor();
-      if (appState.activeBlogId && appState.blogs[appState.activeBlogId]) {
-        renderContributors(appState.blogs[appState.activeBlogId]);
-      }
-    });
-  } else { _populateAuthor(); }
-
-  const mt  = modal.querySelector('.modal-title');
-  const btn = modal.querySelector('.btn-primary');
-
   if (editBlogId) {
+    // EDIT MODE — pre-fill fields
     const blog = appState.blogs[editBlogId];
     if (!blog) return;
-    if (mt) mt.textContent = 'Edit Live Blog';
-    if (btn) btn.textContent = 'Save Changes';
-    document.getElementById('new-blog-title').value    = blog.title || '';
-    document.getElementById('new-blog-category').value = blog.category || '';
-    document.getElementById('new-blog-desc').value     = blog.description || '';
-    if (authorSel) authorSel.value = blog.author || '';
+    document.getElementById('new-blog-title').value = blog.title || '';
+    document.getElementById('new-blog-category').value = blog.category || 'Sport';
+    document.getElementById('new-blog-desc').value = blog.description || '';
+    document.getElementById('new-blog-author').value = blog.author || '';
     if (blog.sport) {
-      document.getElementById('sport-home-team').value  = blog.homeTeam || '';
-      document.getElementById('sport-away-team').value  = blog.awayTeam || '';
-      document.getElementById('sport-venue').value      = blog.venue || '';
+      document.getElementById('sport-home-team').value = blog.homeTeam || '';
+      document.getElementById('sport-away-team').value = blog.awayTeam || '';
+      document.getElementById('sport-venue').value = blog.venue || '';
       document.getElementById('sport-banner-url').value = blog.bannerUrl && !blog.bannerUrl.startsWith('data:') ? blog.bannerUrl : '';
     }
+    submitBtn.textContent = 'Save Changes';
+    submitBtn.onclick = () => saveBlogEdits();
+    if (modalTitle) modalTitle.textContent = 'Edit Live Blog';
   } else {
-    if (mt) mt.textContent = 'Create New Live Blog';
-    if (btn) btn.textContent = 'Create & Go Live';
-    if (authorSel) authorSel.value = appState.user?.displayName || '';
+    // CREATE MODE
+    submitBtn.textContent = 'Create & Go Live';
+    submitBtn.onclick = () => createBlog();
+    if (modalTitle) modalTitle.textContent = 'Create New Live Blog';
+    document.getElementById('new-blog-author').value = appState.user?.displayName || '';
   }
   toggleSportFields();
+  // Populate author dropdown
+  const authorSel = document.getElementById('new-blog-author');
+  if (authorSel && authorSel.tagName === 'SELECT') {
+    const current = authorSel.value;
+    authorSel.innerHTML = '<option value="">Select author...</option>' +
+      getAllUsers().map(u => `<option value="${escHtml(u.displayName)}">${escHtml(u.displayName)}${u.role ? ' — '+escHtml(u.role) : ''}</option>`).join('');
+    if (current) authorSel.value = current;
+    else if (appState.user?.displayName) authorSel.value = appState.user.displayName;
+  }
   setTimeout(() => document.getElementById('new-blog-title').focus(), 100);
 }
 function toggleSportFields() {
@@ -2679,22 +2674,11 @@ function renderContributors(blog) {
   const select = document.getElementById('contributor-select');
   if (!select) return;
   const addedNames = all.map(c => c.name);
-  function _fillContrib(users) {
-    const available = users.filter(u => !addedNames.includes(u.displayName));
-    if (available.length === 0) {
-      select.innerHTML = '<option value="">No other users found</option>';
-      select.disabled = true; return;
-    }
-    select.innerHTML = '<option value="">Select journalist...</option>' +
-      available.map(u => `<option value="${escHtml(u.uid)}" data-name="${escHtml(u.displayName)}" data-initials="${escHtml(u.initials||u.displayName.slice(0,2).toUpperCase())}">${escHtml(u.displayName)}</option>`).join('');
-    select.disabled = false;
-  }
-  if (appState.useFirebase) {
-    appState.db.ref('users').once('value', snap => {
-      appState.allUsers = Object.values(snap.val() || {});
-      _fillContrib(getAllUsers());
-    });
-  } else { _fillContrib(getAllUsers()); }
+  const users = getAllUsers();
+  const available = users.filter(u => !addedNames.includes(u.displayName));
+  select.innerHTML = '<option value="">Select journalist...</option>' +
+    available.map(u => `<option value="${escHtml(u.uid)}" data-name="${escHtml(u.displayName)}" data-initials="${escHtml(u.initials||u.displayName.slice(0,2).toUpperCase())}">${escHtml(u.displayName)}${u.role ? ' — '+escHtml(u.role) : ''}</option>`).join('');
+  select.disabled = false;
 }
 
 async function addContributorFromDropdown() {
