@@ -1521,7 +1521,7 @@ body {
 <!-- ===== JAVASCRIPT ===== -->
 <script>
 // =============================================
-// FIREBASE CONFIG — Replace with your own!
+// FIREBASE CONFIG - Replace with your own!
 // =============================================
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAZ79gVmC6t7yw-iPoUwZDTK_FZtbzL2LE",
@@ -1569,7 +1569,7 @@ function initFirebase() {
   appState.firebaseInitStarted = true;
 
   if (!FIREBASE_CONFIG.apiKey) {
-    console.log('Firebase not configured — running in local demo mode');
+    console.log('Firebase not configured - running in local demo mode');
     const warning = document.getElementById('config-warning');
     if (warning) warning.style.display = 'block';
     updateConnectionIndicator(false);
@@ -1595,7 +1595,7 @@ function initFirebase() {
           }
 
           if (!appState.isEmbedMode) {
-            showToast('Connected to Firebase — real-time sync active!', 'success');
+            showToast('Connected to Firebase - real-time sync active!', 'success');
           }
         });
       });
@@ -1604,7 +1604,7 @@ function initFirebase() {
     console.error('Firebase init failed:', e);
     updateConnectionIndicator(false);
     if (!appState.isEmbedMode) {
-      showToast('Firebase connection failed — using local mode', 'error');
+      showToast('Firebase connection failed - using local mode', 'error');
     }
   }
 }
@@ -1817,7 +1817,7 @@ function openNewBlogModal(editBlogId = null) {
   modal.classList.add('open');
 
   if (editBlogId) {
-    // EDIT MODE — pre-fill fields
+    // EDIT MODE - pre-fill fields
     const blog = appState.blogs[editBlogId];
     if (!blog) return;
     document.getElementById('new-blog-title').value = blog.title || '';
@@ -1965,7 +1965,7 @@ function selectBlog(blogId) {
   document.getElementById('blog-settings-section').style.display = 'block';
   document.getElementById('embed-section').style.display = 'block';
 
-  // Sport scorekeeper — only for Sport blogs with team names
+  // Sport scorekeeper - only for Sport blogs with team names
   const scorekeeperEl = document.getElementById('sport-scorekeeper');
   if (scorekeeperEl) {
     if (blog.sport && blog.hasScore) {
@@ -2294,7 +2294,7 @@ function editPost(postId) {
   updateCharCounter();
   setComposeTab('write', document.querySelectorAll('.compose-tab')[0]);
   document.querySelector('.compose-textarea').focus();
-  showToast('Editing post — make changes and click Update Post');
+  showToast('Editing post - make changes and click Update Post');
 }
 
 async function togglePinPost(postId) {
@@ -2360,7 +2360,7 @@ function clearCompose() {
   appState.uploadedImageDataUrl = null;
   // reset drop zone label
   const dz = document.getElementById('upload-drop-zone');
-  if (dz) dz.innerHTML = `<span style="font-size:28px;">🖼</span><span style="font-size:13px;font-weight:600;color:var(--dash-text);">Click to choose or drag & drop</span><span style="font-size:11px;color:var(--dash-text-muted);">JPG, PNG, GIF, WebP — max 5 MB</span>`;
+  if (dz) dz.innerHTML = `<span style="font-size:28px;">🖼</span><span style="font-size:13px;font-weight:600;color:var(--dash-text);">Click to choose or drag & drop</span><span style="font-size:11px;color:var(--dash-text-muted);">JPG, PNG, GIF, WebP - max 5 MB</span>`;
   document.getElementById('submit-post-btn').textContent = 'Publish Update';
   appState.editingPostId = null;
   updateCharCounter();
@@ -2610,7 +2610,7 @@ function buildEmbedHTML(blogId) {
           </div>
         </div>
       </div>
-      ${postsHtml || '<div style="padding:20px;text-align:center;color:#888;font-size:13px;">No updates yet — check back soon.</div>'}
+      ${postsHtml || '<div style="padding:20px;text-align:center;color:#888;font-size:13px;">No updates yet - check back soon.</div>'}
       <div class="iol-embed-footer">
         <div class="iol-footer-brand">
           <img src="data:image/png;base64,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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/9k=" alt="IOL" style="height:18px;width:auto;display:block;">
@@ -2665,7 +2665,7 @@ function refreshUserDropdown(selectId, excludeNames) {
       const exclude = excludeNames || [];
       const available = users.filter(u => !exclude.includes(u.displayName));
       if (available.length === 0) {
-        select.innerHTML = '<option value="">No users found — have journalists log in first</option>';
+        select.innerHTML = '<option value="">No users found - have journalists log in first</option>';
         return;
       }
       const isAuthor = selectId === 'new-blog-author';
@@ -2680,7 +2680,7 @@ function refreshUserDropdown(selectId, excludeNames) {
       }
     })
     .catch(err => {
-      select.innerHTML = '<option value="">Permission error — check Firebase rules</option>';
+      select.innerHTML = '<option value="">Permission error - check Firebase rules</option>';
       console.error('[IOL] /users read failed:', err.message);
     });
 }
@@ -2722,7 +2722,7 @@ async function addContributorFromDropdown() {
   if (appState.useFirebase) await saveBlogToFirebase(blog);
   else saveBlogsLocal();
   renderContributors(blog);
-  showToast(name + ' added — blog now appears in their dashboard');
+  showToast(name + ' added - blog now appears in their dashboard');
 }
 
 async function removeContributor(uidOrName) {
@@ -2911,7 +2911,7 @@ function startResizeObserver(blogId) {
           ${img}
           ${post.body?`<div class="iol-wbody">${post.body}</div>`:''}
         </div>`;
-      }).join('') : '<div style="padding:20px;text-align:center;color:#888;font-size:13px;">No updates yet — check back soon.</div>';
+      }).join('') : '<div style="padding:20px;text-align:center;color:#888;font-size:13px;">No updates yet - check back soon.</div>';
 
       container.innerHTML = `${styles}
         <div class="iol-w">
@@ -2928,7 +2928,7 @@ function startResizeObserver(blogId) {
         </div>`;
 
       requestAnimationFrame(() => startResizeObserver(blogId));
-      // Real-time updates via Firebase .on('value') — no polling needed
+      // Real-time updates via Firebase .on('value') - no polling needed
     }
 
         function escHtmlW(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
@@ -3092,6 +3092,58 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPdfList();
 });
 
+
+// =============================================
+// INDEXEDDB HELPERS FOR PDF STORAGE
+// (No size limit - handles large PDFs easily)
+// =============================================
+const IDB_NAME    = 'iol-liveblog';
+const IDB_STORE   = 'pdfs';
+const IDB_VERSION = 1;
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+function idbPdfSave(pdf) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const tx  = db.transaction(IDB_STORE, 'readwrite');
+    const req = tx.objectStore(IDB_STORE).put(pdf);
+    req.onsuccess = () => resolve();
+    req.onerror   = e => reject(e.target.error);
+  }));
+}
+function idbPdfGet(id) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(id);
+    req.onsuccess = e => resolve(e.target.result || null);
+    req.onerror   = e => reject(e.target.error);
+  }));
+}
+function idbPdfGetAll() {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll();
+    req.onsuccess = e => resolve(e.target.result || []);
+    req.onerror   = e => reject(e.target.error);
+  }));
+}
+function idbPdfDelete(id) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror   = e => reject(e.target.error);
+  }));
+}
+
 // =============================================
 // PDF EMBED TOOL
 // =============================================
@@ -3145,18 +3197,15 @@ function processPdfFile(file) {
     const pdfId   = 'pdf_' + Date.now();
     const pdf = { id: pdfId, title, category, dataUrl, fileName: file.name, size: file.size, createdAt: new Date().toISOString(), createdBy: appState.user?.displayName || 'Reporter' };
 
-    // Always save to localStorage first (guaranteed, no size limits for base64)
+    // Save to IndexedDB (no size limit, handles large base64 PDFs easily)
     try {
-      const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
-      stored[pdfId] = pdf;
-      localStorage.setItem('iol_pdfs', JSON.stringify(stored));
-      console.log('[IOL PDF] Saved to localStorage:', pdfId, title);
+      await idbPdfSave(pdf);
     } catch(e) {
-      console.error('[IOL PDF] localStorage save failed:', e);
-      showToast('Storage full — try a smaller PDF or clear browser storage', 'error');
+      console.error('[IOL PDF] IndexedDB save failed:', e);
+      showToast('Failed to save PDF: ' + e.message, 'error');
       return;
     }
-    // Also save metadata (not the data URL) to Firebase if connected
+    // Save metadata only to Firebase (no data URL - avoids size limits)
     if (appState.useFirebase) {
       appState.db.ref('pdfs/' + pdfId).set({
         id: pdfId, title, category,
@@ -3169,7 +3218,7 @@ function processPdfFile(file) {
     document.getElementById('pdf-title').value = '';
     document.getElementById('pdf-file-input').value = '';
     const dz = document.getElementById('pdf-drop-zone');
-    dz.innerHTML = '<span style="font-size:32px;">📄</span><span style="font-size:14px;font-weight:600;color:var(--dash-text);">Click to choose PDF or drag & drop</span><span style="font-size:11px;color:var(--dash-text-muted);">PDF files only — max 10 MB</span><input type="file" id="pdf-file-input" accept=".pdf,application/pdf" style="display:none;" onchange="handlePdfUpload(event)">';
+    dz.innerHTML = '<span style="font-size:32px;">📄</span><span style="font-size:14px;font-weight:600;color:var(--dash-text);">Click to choose PDF or drag & drop</span><span style="font-size:11px;color:var(--dash-text-muted);">PDF files only - max 10 MB</span><input type="file" id="pdf-file-input" accept=".pdf,application/pdf" style="display:none;" onchange="handlePdfUpload(event)">';
     dz.setAttribute('for','pdf-file-input');
 
     renderPdfList();
@@ -3191,36 +3240,35 @@ function processPdfFile(file) {
 function renderPdfList() {
   const container = document.getElementById('pdf-list');
   if (!container) return;
-  const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
-  const pdfs = Object.values(stored).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-  if (!pdfs.length) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--dash-text-muted);font-size:13px;">No PDFs uploaded yet. Upload your first one above.</div>';
-    return;
-  }
-  container.innerHTML = pdfs.map(pdf => {
-    const embedCode = getPdfEmbedCode(pdf);
-    const size      = (pdf.size / 1024).toFixed(0) + ' KB';
-    const date      = new Date(pdf.createdAt).toLocaleDateString('en-ZA', { day:'numeric', month:'short', year:'numeric' });
-    return `
-      <div style="background:var(--dash-panel);border:1px solid var(--dash-border);border-radius:var(--radius);padding:16px;">
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
-          <div style="font-size:28px;flex-shrink:0;">📄</div>
-          <div style="flex:1;">
-            <div style="font-size:14px;font-weight:700;color:var(--dash-text);margin-bottom:2px;">${escHtml(pdf.title)}</div>
-            <div style="font-size:11px;color:var(--dash-text-muted);">${escHtml(pdf.category)} · ${size} · ${date} · ${escHtml(pdf.createdBy)}</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
-            <button class="btn btn-ghost btn-xs" onclick="previewPdf('${pdf.id}')">👁 Preview</button>
-            <button class="btn btn-ghost btn-xs" onclick="reuploadPdf('${pdf.id}')">🔄 Re-upload</button>
-            <button class="btn btn-danger btn-xs" onclick="deletePdf('${pdf.id}')">🗑</button>
-          </div>
-        </div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dash-text-muted);margin-bottom:6px;">Embed Code</div>
-        <div class="embed-box" onclick="copyPdfEmbed('${pdf.id}')" style="font-size:10px;">${escHtml(embedCode)}</div>
-        <div style="font-size:11px;color:var(--dash-text-muted);margin-top:5px;">Click to copy • Paste into any IOL story HTML</div>
-        <div id="pdf-copy-${pdf.id}" style="display:none;font-size:11px;color:var(--iol-green);font-weight:600;margin-top:4px;">✓ Copied!</div>
-      </div>`;
-  }).join('');
+  idbPdfGetAll().then(function(allPdfs) {
+    const pdfs = allPdfs.slice().sort(function(a,b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+    if (!pdfs.length) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--dash-text-muted);font-size:13px;">No PDFs uploaded yet. Upload your first one above.</div>';
+      return;
+    }
+    container.innerHTML = pdfs.map(function(pdf) {
+      const embedCode = getPdfEmbedCode(pdf);
+      const size      = (pdf.size / 1024).toFixed(0) + ' KB';
+      const date      = new Date(pdf.createdAt).toLocaleDateString('en-ZA', { day:'numeric', month:'short', year:'numeric' });
+      return '<div style="background:var(--dash-panel);border:1px solid var(--dash-border);border-radius:var(--radius);padding:16px;">'
+        + '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">'
+        + '<div style="font-size:28px;flex-shrink:0;">📄</div>'
+        + '<div style="flex:1;">'
+        + '<div style="font-size:14px;font-weight:700;color:var(--dash-text);margin-bottom:2px;">' + escHtml(pdf.title) + '</div>'
+        + '<div style="font-size:11px;color:var(--dash-text-muted);">' + escHtml(pdf.category) + ' · ' + size + ' · ' + date + ' · ' + escHtml(pdf.createdBy) + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">'
+        + '<button class="btn btn-ghost btn-xs" onclick="previewPdf('' + pdf.id + '')">👁 Preview</button>'
+        + '<button class="btn btn-ghost btn-xs" onclick="reuploadPdf('' + pdf.id + '')">🔄 Re-upload</button>'
+        + '<button class="btn btn-danger btn-xs" onclick="deletePdf('' + pdf.id + '')">🗑</button>'
+        + '</div></div>'
+        + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dash-text-muted);margin-bottom:6px;">Embed Code</div>'
+        + '<div class="embed-box" onclick="copyPdfEmbed('' + pdf.id + '')" style="font-size:10px;word-break:break-all;">' + escHtml(embedCode) + '</div>'
+        + '<div style="font-size:11px;color:var(--dash-text-muted);margin-top:5px;">Click to copy · Paste into any IOL story HTML</div>'
+        + '<div id="pdf-copy-' + pdf.id + '" style="display:none;font-size:11px;color:var(--iol-green);font-weight:600;margin-top:4px;">✓ Copied!</div>'
+        + '</div>';
+    }).join('');
+  });
 }
 
 function getPdfEmbedCode(pdf) {
@@ -3229,51 +3277,44 @@ function getPdfEmbedCode(pdf) {
 }
 
 function copyPdfEmbed(pdfId) {
-  const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
-  const pdf = stored[pdfId]; if (!pdf) return;
-  const code = getPdfEmbedCode(pdf);
-  if (navigator.clipboard) navigator.clipboard.writeText(code);
-  const fb = document.getElementById('pdf-copy-' + pdfId);
-  if (fb) { fb.style.display = 'block'; setTimeout(() => fb.style.display = 'none', 2500); }
+  idbPdfGet(pdfId).then(pdf => {
+    if (!pdf) return;
+    const code = getPdfEmbedCode(pdf);
+    if (navigator.clipboard) navigator.clipboard.writeText(code);
+    const fb = document.getElementById('pdf-copy-' + pdfId);
+    if (fb) { fb.style.display = 'block'; setTimeout(() => fb.style.display = 'none', 2500); }
+  });
 }
 
 function previewPdf(pdfId) {
-  const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
-  const pdf = stored[pdfId]; if (!pdf) return;
-  openPdfViewer(pdf);
+  idbPdfGet(pdfId).then(pdf => {
+    if (!pdf) return;
+    openPdfViewer(pdf);
+  });
 }
 
 function reuploadPdf(pdfId) {
-  const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
-  const pdf = stored[pdfId]; if (!pdf) return;
-  // Pre-fill the title and category fields then trigger file picker
-  document.getElementById('pdf-title').value = pdf.title;
-  document.getElementById('pdf-category').value = pdf.category || 'General';
-  // Delete the old one first so the re-upload replaces it cleanly
-  delete stored[pdfId];
-  localStorage.setItem('iol_pdfs', JSON.stringify(stored));
-  if (appState.useFirebase) {
-    appState.db.ref('pdfs/' + pdfId).remove();
-    appState.db.ref('pdfData/' + pdfId).remove();
-  }
-  // Scroll to upload area and trigger file picker
-  document.getElementById('pdf-drop-zone').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  setTimeout(() => document.getElementById('pdf-file-input').click(), 400);
-  renderPdfList();
-  showToast('Previous version removed — select the new PDF file.');
+  idbPdfGet(pdfId).then(function(pdf) {
+    if (!pdf) return;
+    document.getElementById('pdf-title').value = pdf.title;
+    document.getElementById('pdf-category').value = pdf.category || 'General';
+    idbPdfDelete(pdfId).then(function() {
+      if (appState.useFirebase) appState.db.ref('pdfs/' + pdfId).remove();
+      renderPdfList();
+      document.getElementById('pdf-drop-zone').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function() { document.getElementById('pdf-file-input').click(); }, 400);
+      showToast('Previous version removed - select the new PDF file.');
+    });
+  });
 }
 
 function deletePdf(pdfId) {
   if (!confirm('Delete this PDF?')) return;
-  const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
-  delete stored[pdfId];
-  localStorage.setItem('iol_pdfs', JSON.stringify(stored));
-  if (appState.useFirebase) {
-    appState.db.ref('pdfs/' + pdfId).remove();
-    appState.db.ref('pdfData/' + pdfId).remove();
-  }
-  renderPdfList();
-  showToast('PDF deleted.');
+  idbPdfDelete(pdfId).then(() => {
+    if (appState.useFirebase) appState.db.ref('pdfs/' + pdfId).remove();
+    renderPdfList();
+    showToast('PDF deleted.');
+  });
 }
 
 function openPdfViewer(pdf) {
@@ -3289,7 +3330,7 @@ function buildPdfViewerPage(title, category, dataUrl) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${escHtml(title)} — IOL</title>
+<title>${escHtml(title)} - IOL</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>
 <style>
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -3361,33 +3402,19 @@ function buildPdfViewerPage(title, category, dataUrl) {
   const params = new URLSearchParams(window.location.search);
   const pdfId  = params.get('pdf');
   if (!pdfId) return;
-  // Render PDF viewer inline in this page
   document.body.innerHTML = '';
   document.body.style.cssText = 'margin:0;padding:0;background:#525659;';
-
-  // Load pdf.js
-  const script = document.createElement('script');
+  var script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-  script.onload = () => {
+  script.onload = function() {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    // Try localStorage first, then Firebase
-    const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
-    const pdf = stored[pdfId];
-    if (pdf) {
-      renderPdfEmbed(pdf);
-    } else if (window.firebase) {
-      // Try Firebase
-      firebase.database().ref('pdfs/' + pdfId).once('value').then(s => {
-        const meta = s.val();
-        if (!meta) { document.body.innerHTML = '<p style="color:#fff;padding:20px;">PDF not found.</p>'; return; }
-        return firebase.database().ref('pdfData/' + pdfId).once('value').then(d => {
-          renderPdfEmbed({ ...meta, dataUrl: d.val() });
-        });
-      });
-    } else {
-      document.body.innerHTML = '<p style="color:#fff;padding:20px;">PDF not found.</p>';
-    }
+    idbPdfGet(pdfId).then(function(pdf) {
+      if (pdf) {
+        renderPdfEmbed(pdf);
+      } else {
+        document.body.innerHTML = '<p style="color:#fff;padding:20px;font-family:Arial,sans-serif;">PDF not found. It may have been uploaded on a different browser.</p>';
+      }
+    });
   };
   document.head.appendChild(script);
 })();
@@ -3431,7 +3458,7 @@ function renderPdfEmbed(pdf) {
   window.eNext=function(){ if(ePage<eTotal){ePage++;eRender(ePage);} };
   window.eZoomIn=function(){ eScale=Math.min(eScale+0.15,2.5); eRender(ePage); };
   window.eZoomOut=function(){ eScale=Math.max(eScale-0.15,0.4); eRender(ePage); };
-  function escHtmlE(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''; }
+  function escHtmlE(s){ return s?String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"):""; }
 
   pdfjsLib.getDocument(pdf.dataUrl).promise.then(function(d){ eDoc=d; eTotal=d.numPages; eRender(1); });
 }
