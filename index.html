@@ -2739,8 +2739,92 @@ function startResizeObserver(blogId) {
   }
 }
 
+function renderPdfViewer(pdf) {
+  var style = document.createElement('style');
+  style.textContent = [
+    '* { box-sizing:border-box; margin:0; padding:0; }',
+    'body { font-family:Arial,sans-serif; background:#525659; }',
+    '.hdr { background:#D0021B; padding:10px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:10; }',
+    '.hdr-t { color:white; font-weight:700; font-size:15px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }',
+    '.hdr-c { color:rgba(255,255,255,0.75); font-size:11px; white-space:nowrap; }',
+    '.tb { background:#f0f0f0; border-bottom:1px solid #ddd; padding:8px 12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; position:sticky; top:48px; z-index:9; }',
+    '.tb button { background:white; border:1px solid #ccc; border-radius:4px; padding:5px 14px; font-size:12px; cursor:pointer; font-weight:600; }',
+    '.tb button:hover { background:#D0021B; color:white; border-color:#D0021B; }',
+    '.tb button:disabled { opacity:0.4; cursor:not-allowed; }',
+    '.pi { font-size:12px; color:#555; margin-left:auto; }',
+    '#vw { padding:12px; display:flex; flex-direction:column; align-items:center; gap:12px; min-height:calc(100vh - 100px); }',
+    'canvas { display:block; box-shadow:0 2px 10px rgba(0,0,0,0.5); background:white; max-width:calc(100vw - 24px); }'
+  ].join('');
+  document.head.appendChild(style);
+
+  document.body.innerHTML =
+    '<div class="hdr">' +
+      '<span class="hdr-t">' + (pdf.title || 'Document') + '</span>' +
+      '<span class="hdr-c">' + (pdf.category || '') + '</span>' +
+    '</div>' +
+    '<div class="tb">' +
+      '<button onclick="ePrev()" id="ep">Prev</button>' +
+      '<button onclick="eNext()" id="en">Next</button>' +
+      '<button onclick="eZoomOut()">- Zoom</button>' +
+      '<button onclick="eZoomIn()">+ Zoom</button>' +
+      '<span class="pi" id="epi">Loading...</span>' +
+    '</div>' +
+    '<div id="vw"></div>';
+
+  var eDoc = null, ePage = 1, eTotal = 0, eScale = 1.2;
+
+  function eRender(n) {
+    eDoc.getPage(n).then(function(pg) {
+      var maxW = Math.max(document.body.clientWidth - 24, 300);
+      var vp = pg.getViewport({ scale: eScale });
+      if (vp.width > maxW) {
+        eScale = eScale * (maxW / vp.width);
+        vp = pg.getViewport({ scale: eScale });
+      }
+      var cv = document.createElement('canvas');
+      cv.width = vp.width; cv.height = vp.height;
+      pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function() {
+        var v = document.getElementById('vw');
+        v.innerHTML = ''; v.appendChild(cv);
+        document.getElementById('epi').textContent = 'Page ' + n + ' / ' + eTotal;
+        document.getElementById('ep').disabled = n <= 1;
+        document.getElementById('en').disabled = n >= eTotal;
+        window.parent && window.parent.postMessage({ type: 'iol-pdf-resize', height: document.body.scrollHeight }, '*');
+      });
+    });
+  }
+
+  window.ePrev = function() { if (ePage > 1) { ePage--; eRender(ePage); } };
+  window.eNext = function() { if (ePage < eTotal) { ePage++; eRender(ePage); } };
+  window.eZoomIn  = function() { eScale = Math.min(eScale + 0.2, 3); eRender(ePage); };
+  window.eZoomOut = function() { eScale = Math.max(eScale - 0.2, 0.5); eRender(ePage); };
+
+  pdfjsLib.getDocument(pdf.dataUrl).promise.then(function(d) {
+    eDoc = d; eTotal = d.numPages; eRender(1);
+  });
+}
+
 (function checkEmbedMode() {
   const params = new URLSearchParams(window.location.search);
+
+  // PDF embed mode - bypass login entirely
+  const pdfId = params.get('pdf');
+  if (pdfId) {
+    document.body.innerHTML = '';
+    document.body.style.cssText = 'margin:0;padding:0;background:#525659;';
+    var pdfScript = document.createElement('script');
+    pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    pdfScript.onload = function() {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      idbGet(pdfId).then(function(pdf) {
+        if (pdf) { renderPdfViewer(pdf); }
+        else { document.body.innerHTML = '<p style="color:#fff;padding:20px;font-family:Arial,sans-serif;">PDF not found.</p>'; }
+      });
+    };
+    document.head.appendChild(pdfScript);
+    return;
+  }
+
   const embedBlogId = params.get('embed');
   const previewBlogId = params.get('preview');
 
