@@ -3088,6 +3088,8 @@ function showTool(tool) {
 // Set live blogs as default active
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nav-liveblog')?.classList.add('active');
+  // Pre-load PDF list so it shows immediately when switching to the tab
+  renderPdfList();
 });
 
 // =============================================
@@ -3164,6 +3166,15 @@ function processPdfFile(file) {
 
     renderPdfList();
     showToast('PDF uploaded! Copy the embed code below.');
+    // Scroll to the newly uploaded PDF card
+    setTimeout(() => {
+      const first = document.querySelector('#pdf-list > div');
+      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Flash highlight the new card
+      first.style.transition = 'border-color 0.3s';
+      first.style.borderColor = 'var(--iol-red)';
+      setTimeout(() => { first.style.borderColor = ''; }, 2000);
+    }, 100);
   };
   reader.onerror = () => { clearInterval(ticker); showToast('Failed to read file', 'error'); progress.style.display = 'none'; };
   reader.readAsDataURL(file);
@@ -3190,8 +3201,9 @@ function renderPdfList() {
             <div style="font-size:14px;font-weight:700;color:var(--dash-text);margin-bottom:2px;">${escHtml(pdf.title)}</div>
             <div style="font-size:11px;color:var(--dash-text-muted);">${escHtml(pdf.category)} · ${size} · ${date} · ${escHtml(pdf.createdBy)}</div>
           </div>
-          <div style="display:flex;gap:6px;flex-shrink:0;">
+          <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-xs" onclick="previewPdf('${pdf.id}')">👁 Preview</button>
+            <button class="btn btn-ghost btn-xs" onclick="reuploadPdf('${pdf.id}')">🔄 Re-upload</button>
             <button class="btn btn-danger btn-xs" onclick="deletePdf('${pdf.id}')">🗑</button>
           </div>
         </div>
@@ -3221,6 +3233,26 @@ function previewPdf(pdfId) {
   const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
   const pdf = stored[pdfId]; if (!pdf) return;
   openPdfViewer(pdf);
+}
+
+function reuploadPdf(pdfId) {
+  const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
+  const pdf = stored[pdfId]; if (!pdf) return;
+  // Pre-fill the title and category fields then trigger file picker
+  document.getElementById('pdf-title').value = pdf.title;
+  document.getElementById('pdf-category').value = pdf.category || 'General';
+  // Delete the old one first so the re-upload replaces it cleanly
+  delete stored[pdfId];
+  localStorage.setItem('iol_pdfs', JSON.stringify(stored));
+  if (appState.useFirebase) {
+    appState.db.ref('pdfs/' + pdfId).remove();
+    appState.db.ref('pdfData/' + pdfId).remove();
+  }
+  // Scroll to upload area and trigger file picker
+  document.getElementById('pdf-drop-zone').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => document.getElementById('pdf-file-input').click(), 400);
+  renderPdfList();
+  showToast('Previous version removed — select the new PDF file.');
 }
 
 function deletePdf(pdfId) {
