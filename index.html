@@ -3145,17 +3145,25 @@ function processPdfFile(file) {
     const pdfId   = 'pdf_' + Date.now();
     const pdf = { id: pdfId, title, category, dataUrl, fileName: file.name, size: file.size, createdAt: new Date().toISOString(), createdBy: appState.user?.displayName || 'Reporter' };
 
-    // Save to Firebase or localStorage
+    // Always save to localStorage first (guaranteed, no size limits for base64)
     try {
-      if (appState.useFirebase) {
-        await appState.db.ref('pdfs/' + pdfId).set({ id: pdfId, title, category, fileName: file.name, size: file.size, createdAt: pdf.createdAt, createdBy: pdf.createdBy });
-        // Store the data URL separately (it can be large)
-        await appState.db.ref('pdfData/' + pdfId).set(dataUrl);
-      }
       const stored = JSON.parse(localStorage.getItem('iol_pdfs') || '{}');
       stored[pdfId] = pdf;
       localStorage.setItem('iol_pdfs', JSON.stringify(stored));
-    } catch(e) { console.error('PDF save error:', e); }
+      console.log('[IOL PDF] Saved to localStorage:', pdfId, title);
+    } catch(e) {
+      console.error('[IOL PDF] localStorage save failed:', e);
+      showToast('Storage full — try a smaller PDF or clear browser storage', 'error');
+      return;
+    }
+    // Also save metadata (not the data URL) to Firebase if connected
+    if (appState.useFirebase) {
+      appState.db.ref('pdfs/' + pdfId).set({
+        id: pdfId, title, category,
+        fileName: file.name, size: file.size,
+        createdAt: pdf.createdAt, createdBy: pdf.createdBy,
+      }).catch(e => console.warn('[IOL PDF] Firebase metadata save failed:', e.message));
+    }
 
     // Reset form
     document.getElementById('pdf-title').value = '';
