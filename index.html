@@ -1555,9 +1555,11 @@ function initFirebase() {
     loadFirebaseScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js', () => {
       loadFirebaseScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js', () => {
         loadFirebaseScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js', () => {
+          loadFirebaseScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js', () => {
           firebase.initializeApp(FIREBASE_CONFIG);
           appState.auth = firebase.auth();
           appState.db = firebase.database();
+          appState.storage = firebase.storage();
           appState.useFirebase = true;
           appState.firebaseReady = true;
           updateConnectionIndicator(true);
@@ -1572,6 +1574,7 @@ function initFirebase() {
           if (!appState.isEmbedMode) {
             showToast('Connected to Firebase  -  real-time sync active!', 'success');
           }
+          }); // storage
         });
       });
     });
@@ -2569,7 +2572,6 @@ function buildEmbedHTML(blogId) {
       <div class="iol-embed-post ${post.type === 'key' ? 'is-key' : ''} ${post.type === 'breaking' ? 'is-breaking' : ''}">
         <div class="iol-post-meta">
           <span class="iol-post-time">${timeStr}</span>
-          <span class="iol-post-author">${escHtml(post.author)}</span>
           ${tagHtml}
         </div>
         ${post.headline ? `<div class="iol-post-headline">${escHtml(post.headline)}</div>` : ''}
@@ -2799,7 +2801,9 @@ function renderPdfViewer(pdf) {
   window.eZoomIn  = function() { eScale = Math.min(eScale + 0.2, 3); eRender(ePage); };
   window.eZoomOut = function() { eScale = Math.max(eScale - 0.2, 0.5); eRender(ePage); };
 
-  pdfjsLib.getDocument(pdf.dataUrl).promise.then(function(d) {
+  // Use downloadURL (Firebase Storage, public) or fall back to dataUrl (local)
+  var pdfSource = pdf.downloadURL || pdf.dataUrl;
+  pdfjsLib.getDocument(pdfSource).promise.then(function(d) {
     eDoc = d; eTotal = d.numPages; eRender(1);
   });
 }
@@ -2812,16 +2816,40 @@ function renderPdfViewer(pdf) {
   if (pdfId) {
     document.body.innerHTML = '';
     document.body.style.cssText = 'margin:0;padding:0;background:#525659;';
-    var pdfScript = document.createElement('script');
-    pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    pdfScript.onload = function() {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      idbGet(pdfId).then(function(pdf) {
-        if (pdf) { renderPdfViewer(pdf); }
-        else { document.body.innerHTML = '<p style="color:#fff;padding:20px;font-family:Arial,sans-serif;">PDF not found.</p>'; }
+    // Load Firebase + pdf.js then render
+    function loadScript(src, cb) {
+      var s = document.createElement('script'); s.src = src;
+      s.onload = cb; document.head.appendChild(s);
+    }
+    loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js', function() {
+      loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js', function() {
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', function() {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          // Init Firebase (safe to call even if already initialized)
+          try {
+            if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+          } catch(e) {}
+          // Try local IndexedDB first (uploader's browser), then Firebase (everyone else)
+          idbGet(pdfId).then(function(localPdf) {
+            if (localPdf && localPdf.dataUrl) {
+              renderPdfViewer(localPdf);
+            } else {
+              var db = firebase.database();
+              db.ref('pdfs/' + pdfId).once('value').then(function(snap) {
+                var meta = snap.val();
+                if (meta && meta.downloadURL) {
+                  renderPdfViewer(meta);
+                } else {
+                  document.body.innerHTML = '<p style="color:#fff;padding:20px;font-family:Arial,sans-serif;">PDF not found. Please re-upload from the dashboard.</p>';
+                }
+              }).catch(function(err) {
+                document.body.innerHTML = '<p style="color:#fff;padding:20px;font-family:Arial,sans-serif;">Could not load PDF: ' + err.message + '</p>';
+              });
+            }
+          });
+        });
       });
-    };
-    document.head.appendChild(pdfScript);
+    });
     return;
   }
 
@@ -2914,7 +2942,7 @@ function renderPdfViewer(pdf) {
         const isScoreUp = post.isScoreUpdate && hasScore;
         const cardCls = [post.type==='key'?'key':'', post.type==='breaking'?'breaking':'', isScoreUp?'score-up':''].filter(Boolean).join(' ');
         return `<div class="iol-wp ${cardCls}">
-          <div class="iol-wm"><span class="iol-wtime">${t}</span><span class="iol-wauthor">${escHtmlW(post.author||'')}</span>${tag}</div>
+          <div class="iol-wm"><span class="iol-wtime">${t}</span>${tag}</div>
           ${post.headline?`<div class="iol-whl${isScoreUp?' score-hl':''}">${isScoreUp?'🏆 ':''}${escHtmlW(post.headline)}</div>`:''}
           ${img}
           ${post.body?`<div class="iol-wbody">${post.body}</div>`:''}
@@ -3220,17 +3248,32 @@ function processPdfFile(file) {
     };
 
     idbSave(pdf).then(function() {
-      if (appState.useFirebase) {
-        appState.db.ref('pdfs/' + pdfId).set({
-          id: pdfId, title: title, category: category,
-          fileName: file.name, size: file.size,
-          createdAt: pdf.createdAt, createdBy: pdf.createdBy
-        }).catch(function(e) { console.warn('Firebase PDF meta save failed:', e.message); });
+      // Always save to IndexedDB for the uploader's own preview
+      if (appState.useFirebase && appState.storage) {
+        // Upload the actual PDF file (not base64) to Firebase Storage
+        var storageRef = appState.storage.ref('pdfs/' + pdfId + '/' + file.name);
+        showToast('Uploading to Firebase Storage...');
+        storageRef.put(file).then(function(snapshot) {
+          return snapshot.ref.getDownloadURL();
+        }).then(function(downloadURL) {
+          // Save metadata + public download URL to Realtime Database
+          return appState.db.ref('pdfs/' + pdfId).set({
+            id: pdfId, title: title, category: category,
+            fileName: file.name, size: file.size,
+            createdAt: pdf.createdAt, createdBy: pdf.createdBy,
+            downloadURL: downloadURL
+          });
+        }).then(function() {
+          showToast('PDF uploaded and published! Copy the embed code.');
+        }).catch(function(err) {
+          console.error('Firebase Storage upload failed:', err);
+          showToast('Storage upload failed: ' + err.message + ' - embed will work on this browser only', 'error');
+        });
       }
       document.getElementById('pdf-title').value = '';
       document.getElementById('pdf-file-input').value = '';
       renderPdfList();
-      showToast('PDF uploaded! Copy the embed code below.');
+      if (!appState.useFirebase) showToast('PDF saved locally. Connect Firebase for public embeds.');
       setTimeout(function() {
         var first = document.querySelector('#pdf-list > div');
         if (first) {
