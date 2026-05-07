@@ -1178,6 +1178,9 @@ body {
             </select>
           </div>
           <textarea class="compose-textarea" id="post-body" placeholder="Write your update here... Supports basic HTML: <b>bold</b>, <i>italic</i>, <a href=''>links</a>" oninput="updateCharCounter()"></textarea>
+          <div class="compose-row" style="margin-top:6px;">
+            <input class="compose-input" id="post-author-override" placeholder="Post author (optional — leave blank to hide on front end)">
+          </div>
           <div class="compose-actions">
             <span class="char-counter" id="char-counter">0 chars</span>
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:12px; color:var(--dash-text-muted);">
@@ -2147,7 +2150,7 @@ async function submitPost() {
     pinned,
     imageUrl,
     imageCaption,
-    author: appState.user?.displayName || 'Reporter',
+    author: document.getElementById('post-author-override')?.value.trim() || '',
     authorInitials: appState.user?.initials || 'R',
     timestamp: isEdit ? (appState.posts[blogId][postId]?.timestamp || new Date().toISOString()) : new Date().toISOString(),
     editedAt: isEdit ? new Date().toISOString() : null,
@@ -2269,6 +2272,8 @@ function editPost(postId) {
   document.getElementById('post-body').value = post.body || '';
   document.getElementById('post-type').value = post.type || 'update';
   document.getElementById('post-pin').checked = post.pinned || false;
+  const authorOverride = document.getElementById('post-author-override');
+  if (authorOverride) authorOverride.value = post.author || '';
   document.getElementById('post-image-url').value = post.imageUrl || '';
   document.getElementById('post-image-caption').value = post.imageCaption || '';
   document.getElementById('submit-post-btn').textContent = 'Update Post';
@@ -2330,7 +2335,7 @@ async function deletePost(postId) {
 // COMPOSE HELPERS
 // =============================================
 function clearCompose() {
-  ['post-headline','post-body','post-image-url','post-image-caption'].forEach(id => document.getElementById(id).value = '');
+  ['post-headline','post-body','post-image-url','post-image-caption','post-author-override'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('post-type').value = 'update';
   document.getElementById('post-pin').checked = false;
   document.getElementById('image-preview').classList.remove('show');
@@ -2572,6 +2577,7 @@ function buildEmbedHTML(blogId) {
       <div class="iol-embed-post ${post.type === 'key' ? 'is-key' : ''} ${post.type === 'breaking' ? 'is-breaking' : ''}">
         <div class="iol-post-meta">
           <span class="iol-post-time">${timeStr}</span>
+          ${post.author ? `<span class="iol-post-author">${escHtml(post.author)}</span>` : ''}
           ${tagHtml}
         </div>
         ${post.headline ? `<div class="iol-post-headline">${escHtml(post.headline)}</div>` : ''}
@@ -2942,7 +2948,7 @@ function renderPdfViewer(pdf) {
         const isScoreUp = post.isScoreUpdate && hasScore;
         const cardCls = [post.type==='key'?'key':'', post.type==='breaking'?'breaking':'', isScoreUp?'score-up':''].filter(Boolean).join(' ');
         return `<div class="iol-wp ${cardCls}">
-          <div class="iol-wm"><span class="iol-wtime">${t}</span>${tag}</div>
+          <div class="iol-wm"><span class="iol-wtime">${t}</span>${post.author ? `<span class="iol-wauthor">${escHtmlW(post.author)}</span>` : ''} ${tag}</div>
           ${post.headline?`<div class="iol-whl${isScoreUp?' score-hl':''}">${isScoreUp?'🏆 ':''}${escHtmlW(post.headline)}</div>`:''}
           ${img}
           ${post.body?`<div class="iol-wbody">${post.body}</div>`:''}
