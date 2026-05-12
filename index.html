@@ -1177,7 +1177,7 @@ body {
               <option value="key">⭐ Key Moment</option>
             </select>
           </div>
-          <textarea class="compose-textarea" id="post-body" placeholder="Write your update here... Supports basic HTML: <b>bold</b>, <i>italic</i>, <a href=''>links</a>" oninput="updateCharCounter()"></textarea>
+          <textarea class="compose-textarea" id="post-body" placeholder="Write your update here... Supports basic HTML: <b>bold</b>, <i>italic</i>, <a href=''>links</a>" oninput="updateCharCounter()" onpaste="handleBodyPaste(event)"></textarea>
           <div class="compose-row" style="margin-top:6px;">
             <input class="compose-input" id="post-author-override" placeholder="Post author (optional — leave blank to hide on front end)">
           </div>
@@ -1768,14 +1768,29 @@ function loadPostsFromFirebase(blogId) {
 async function saveBlogToFirebase(blog) {
   if (!appState.useFirebase) return;
   await appState.db.ref('blogs/' + blog.id).set(blog);
+  writeBlogCache(blog.id);
 }
 async function savePostToFirebase(blogId, post) {
   if (!appState.useFirebase) return;
   await appState.db.ref('posts/' + blogId + '/' + post.id).set(post);
+  writeBlogCache(blogId);
 }
 async function deletePostFromFirebase(blogId, postId) {
   if (!appState.useFirebase) return;
   await appState.db.ref('posts/' + blogId + '/' + postId).remove();
+  writeBlogCache(blogId);
+}
+
+function writeBlogCache(blogId) {
+  if (!appState.useFirebase) return;
+  const blog = appState.blogs[blogId];
+  const posts = appState.posts[blogId] || {};
+  if (!blog) return;
+  // Build the same HTML renderWidget would produce
+  const cacheHtml = buildEmbedHTML(blogId);
+  // Store as a plain string — readable via Firebase REST with no SDK
+  appState.db.ref('cache/' + blogId).set(cacheHtml)
+    .catch(e => console.warn('Cache write failed:', e.message));
 }
 
 function getFirebaseWriteErrorMessage(error) {
@@ -2261,6 +2276,8 @@ function renderPosts() {
       </div>
     `;
   }).join('');
+  // Expand any Twitter URLs in post bodies
+  setTimeout(function() { loadTwitterWidgets(container); }, 100);
 }
 
 function editPost(postId) {
@@ -2878,9 +2895,24 @@ function renderPdfViewer(pdf) {
     container.style.cssText = 'font-family: Poppins, sans-serif;';
     document.body.appendChild(container);
 
+    // Step 1: Fetch pre-rendered cache via Firebase REST (no SDK, instant)
+    const dbUrl = FIREBASE_CONFIG.databaseURL;
+    if (dbUrl) {
+      fetch(dbUrl.replace(/\/$/,'') + '/cache/' + blogId + '.json')
+        .then(r => r.json())
+        .then(cached => {
+          if (cached && typeof cached === 'string' && cached.length > 10) {
+            // Render immediately from cache — no SDK needed
+            container.innerHTML = cached;
+            requestAnimationFrame(() => startResizeObserver(blogId));
+          }
+        })
+        .catch(() => {}); // Silent fail — SDK will render shortly after
+    }
+
     function renderWidget(blogs, posts) {
       const blog = blogs[blogId];
-      if (!blog) { container.innerHTML = '<p style="color:#888;font-size:13px;padding:10px;">Live blog not found.</p>'; return; }
+      if (!blog) { return; } // Keep skeleton visible while Firebase connects
       const isSport  = !!blog.sport;
       const hasScore = isSport && !!blog.hasScore;
       const accent   = isSport ? '#1a7a3c' : '#D0021B';
@@ -2970,6 +3002,8 @@ function renderPdfViewer(pdf) {
         </div>`;
 
       requestAnimationFrame(() => startResizeObserver(blogId));
+      // Load Twitter embeds if any posts contain tweet blockquotes
+      setTimeout(function() { loadTwitterWidgets(container); }, 300);
       // Real-time updates via Firebase .on('value')  -  no polling needed
     }
 
@@ -3410,6 +3444,49 @@ function reuploadPdf(pdfId) {
       showToast('Select the new PDF file.');
     });
   });
+}
+
+
+// =============================================
+// TWITTER / X EMBED HELPERS
+// =============================================
+function handleBodyPaste(e) {
+  // Small delay so pasted text is in the textarea
+  setTimeout(function() {
+    var el = document.getElementById('post-body');
+    if (!el) return;
+    var text = el.value;
+    var converted = convertTwitterUrls(text);
+    if (converted !== text) {
+      el.value = converted;
+      updateCharCounter();
+    }
+  }, 50);
+}
+
+function convertTwitterUrls(text) {
+  // Match twitter.com or x.com tweet URLs
+  var tweetRegex = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[A-Za-z0-9_]+\/status\/(\d+)[^\s]*/g;
+  return text.replace(tweetRegex, function(url) {
+    var clean = url.split('?')[0];
+    return '<blockquote class="twitter-tweet" data-dnt="true"><a href="' + clean + '"></a></blockquote>';
+  });
+}
+
+function loadTwitterWidgets(container) {
+  // Only load if there are twitter blockquotes in the container
+  if (!container || !container.querySelector('.twitter-tweet')) return;
+  if (window.twttr && window.twttr.widgets) {
+    window.twttr.widgets.load(container);
+  } else {
+    var s = document.createElement('script');
+    s.src = 'https://platform.twitter.com/widgets.js';
+    s.async = true;
+    s.onload = function() {
+      if (window.twttr && window.twttr.widgets) window.twttr.widgets.load(container);
+    };
+    document.head.appendChild(s);
+  }
 }
 
 // Periodic stats refresh
