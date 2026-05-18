@@ -2506,22 +2506,14 @@ function getEmbedBaseUrl() {
 
 function updateEmbedCode(blogId) {
   const baseUrl = getEmbedBaseUrl();
-  const embedUrl = `${baseUrl}?embed=${blogId}`;
-  const frameId = `iol-liveblog-${blogId}`;
-  const embedOrigin = new URL(baseUrl).origin;
-  const code = `<iframe id="${frameId}" src="${embedUrl}" loading="lazy" style="width:100%;border:0;min-height:640px;" referrerpolicy="no-referrer-when-downgrade"></iframe>
-<script>
-(function() {
-  var frame = document.getElementById('${frameId}');
-  if (!frame) return;
-  function receiveMessage(event) {
-    if (event.origin !== '${embedOrigin}') return;
-    if (!event.data || event.data.type !== 'iol-liveblog:resize' || event.data.blogId !== '${blogId}') return;
-    frame.style.height = Math.max(event.data.height || 640, 320) + 'px';
-  }
-  window.addEventListener('message', receiveMessage);
-})();
-<\/script>`;
+  const dbUrl = FIREBASE_CONFIG.databaseURL || '';
+
+  // Web component embed — fully self-contained, Shadow DOM isolated,
+  // safe for any CMS, no iframes, no style/script conflicts
+  const code =
+    `<script src="${baseUrl}liveblog-widget.js?v=1" defer><\/script>` + '\n' +
+    `<iol-liveblog blog-id="${blogId}" db-url="${dbUrl}"></iol-liveblog>`;
+
   const el = document.getElementById('embed-code');
   if (el) el.textContent = code;
   const elModal = document.getElementById('embed-code-modal');
