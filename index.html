@@ -1791,7 +1791,7 @@ function writeBlogCache(blogId) {
   const blog = appState.blogs[blogId];
   const posts = appState.posts[blogId] || {};
   if (!blog) return;
-  // Store blog + posts as objects — widget.js builds the HTML client-side
+  // Store blog + posts as objects  -  widget.js builds the HTML client-side
   // This avoids storing large HTML strings and keeps the cache small
   appState.db.ref('cache/' + blogId).set({ blog: blog, posts: posts })
     .catch(e => console.warn('Cache write failed:', e.message));
@@ -2512,7 +2512,7 @@ function updateEmbedCode(blogId) {
   const baseUrl = getEmbedBaseUrl();
   const dbUrl = FIREBASE_CONFIG.databaseURL || '';
 
-  // Web component embed — fully self-contained, Shadow DOM isolated,
+  // Web component embed  -  fully self-contained, Shadow DOM isolated,
   // safe for any CMS, no iframes, no style/script conflicts
   const code =
     `<script src="${baseUrl}liveblog-widget.js?v=1" defer><\/script>` + '\n' +
@@ -2898,12 +2898,12 @@ function renderPdfViewer(pdf) {
         .then(r => r.json())
         .then(cached => {
           if (cached && typeof cached === 'string' && cached.length > 10) {
-            // Render immediately from cache — no SDK needed
+            // Render immediately from cache  -  no SDK needed
             container.innerHTML = cached;
             requestAnimationFrame(() => startResizeObserver(blogId));
           }
         })
-        .catch(() => {}); // Silent fail — SDK will render shortly after
+        .catch(() => {}); // Silent fail  -  SDK will render shortly after
     }
 
     function renderWidget(blogs, posts) {
