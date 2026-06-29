@@ -1177,7 +1177,12 @@ body {
               <option value="key">⭐ Key Moment</option>
             </select>
           </div>
-          <textarea class="compose-textarea" id="post-body" placeholder="Write your update here... Supports basic HTML: <b>bold</b>, <i>italic</i>, <a href=''>links</a>" oninput="updateCharCounter()" onpaste="handleBodyPaste(event)"></textarea>
+          <div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-ghost btn-xs" onclick="fmtText('bold')" style="font-weight:700;">B</button>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="fmtText('italic')" style="font-style:italic;">I</button>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="insertLink()">Link</button>
+          </div>
+          <textarea class="compose-textarea" id="post-body" placeholder="Write your update here... Select text then click Link to add a hyperlink." oninput="updateCharCounter()" onpaste="handleBodyPaste(event)"></textarea>
           <div class="compose-row" style="margin-top:6px;">
             <input class="compose-input" id="post-author-override" placeholder="Post author (optional — leave blank to hide on front end)">
           </div>
@@ -3478,6 +3483,51 @@ function loadTwitterWidgets(container) {
     };
     document.head.appendChild(s);
   }
+}
+
+// =============================================
+// COMPOSE FORMATTING HELPERS
+// =============================================
+function fmtText(type) {
+  var el = document.getElementById('post-body');
+  if (!el) return;
+  var start = el.selectionStart;
+  var end   = el.selectionEnd;
+  var sel   = el.value.substring(start, end);
+  var before = el.value.substring(0, start);
+  var after  = el.value.substring(end);
+  var wrapped = '';
+  if (type === 'bold')   wrapped = '<b>'  + (sel || 'bold text')   + '</b>';
+  if (type === 'italic') wrapped = '<i>'  + (sel || 'italic text') + '</i>';
+  el.value = before + wrapped + after;
+  // Place cursor after inserted text
+  var newPos = start + wrapped.length;
+  el.setSelectionRange(newPos, newPos);
+  el.focus();
+  updateCharCounter();
+}
+
+function insertLink() {
+  var el = document.getElementById('post-body');
+  if (!el) return;
+  var start = el.selectionStart;
+  var end   = el.selectionEnd;
+  var sel   = el.value.substring(start, end).trim();
+
+  var url = prompt('Enter URL:', 'https://');
+  if (!url || url === 'https://') return;
+
+  // If no text was selected, use the URL as the link text
+  var linkText = sel || url;
+  var tag = '<a href="' + url + '" target="_blank" rel="noopener">' + linkText + '</a>';
+
+  var before = el.value.substring(0, start);
+  var after  = el.value.substring(end);
+  el.value = before + tag + after;
+  var newPos = start + tag.length;
+  el.setSelectionRange(newPos, newPos);
+  el.focus();
+  updateCharCounter();
 }
 
 // Periodic stats refresh
